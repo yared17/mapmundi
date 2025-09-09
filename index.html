@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Mapa Mundi — Población Equivalente</title>
+
+  <!-- Leaflet -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+  />
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+  ></script>
+
+  <!-- Estilos -->
+  <style>
+    :root{
+      --bg:#0b1320; --panel:#0f1a30; --text:#e6eefc; --muted:#a9b7d0;
+      --accent:#4cc9f0; --accent-2:#64dfdf; --selected:#80ffdb; --equiv:#ffd166; --border:#21324f;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%;margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,'Helvetica Neue',Arial}
+    #app{display:grid;grid-template-columns:340px 1fr;grid-template-rows:auto 1fr;gap:10px;height:100%;padding:10px}
+    header{
+      grid-column:1/3;background:linear-gradient(90deg, rgba(76,201,240,.12), rgba(100,223,223,.04));
+      border:1px solid var(--border);border-radius:14px;padding:12px 16px;display:flex;align-items:center;justify-content:space-between
+    }
+    header h1{font-size:18px;margin:0;font-weight:700;letter-spacing:.3px}
+    header .actions{display:flex;gap:8px}
+    button,.pill{background:var(--panel);color:var(--text);border:1px solid var(--border);padding:8px 12px;border-radius:10px;cursor:pointer;font-weight:600}
+    button:hover{border-color:var(--accent);box-shadow:0 0 0 3px rgba(76,201,240,.12)}
+    #sidebar{grid-row:2;grid-column:1;background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:12px;min-height:0}
+    #info{background:rgba(255,255,255,.03);border:1px dashed var(--border);border-radius:12px;padding:12px}
+    #legend{display:flex;gap:8px;flex-wrap:wrap}
+    .legend-item{display:flex;align-items:center;gap:8px;padding:6px 8px;border:1px solid var(--border);border-radius:10px;background:rgba(255,255,255,.03)}
+    .swatch{width:14px;height:14px;border-radius:3px;border:1px solid #0003}
+    .swatch.selected{background:var(--selected)} .swatch.equiv{background:var(--equiv)} .swatch.base{background:#6b7280}
+    #countriesList{overflow:auto;flex:1;border:1px solid var(--border);border-radius:12px;padding:8px}
+    #countriesList .item{display:flex;justify-content:space-between;gap:8px;padding:6px 8px;border-bottom:1px dashed var(--border);font-size:13px;color:var(--muted)}
+    #countriesList .item strong{color:var(--text)}
+    #map{grid-row:2;grid-column:2;border:1px solid var(--border);border-radius:14px;min-height:0}
+    #map,.leaflet-container{height:100%}
+    .stat{display:grid;grid-template-columns:1fr auto;gap:6px;font-size:14px}
+    .stat .val{font-weight:700;color:var(--accent)}
+    .muted{color:var(--muted)} .hint{font-size:12px;color:var(--muted)}
+    .tag{display:inline-block;padding:2px 8px;border-radius:999px;border:1px solid var(--border);background:rgba(255,255,255,.04);font-size:12px}
+    .foot{font-size:11px;color:var(--muted)}
+    @media (max-width:980px){#app{grid-template-columns:1fr;grid-template-rows:auto 320px 1fr}#sidebar{grid-row:3;grid-column:1}#map{grid-row:2;grid-column:1}}
+
+    /* Ajustes de render */
+    .leaflet-container { background:#d0e7f9; }       /* océano */
+    .leaflet-tile { image-rendering:auto; outline:1px solid transparent; border:0; }
+  </style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1>Mapa Mundi</h1>
+    <div class="actions">
+      <button id="btnDownload">Descargar JSON de población</button>
+      <span class="pill" id="statusPill">Cargando datos…</span>
+    </div>
+  </header>
+
+  <aside id="sidebar">
+    <div id="info">
+      <div class="stat"><span>País seleccionado</span><span class="val" id="selName">—</span></div>
+      <div class="stat"><span>Población objetivo</span><span class="val" id="selPop">—</span></div>
+      <div class="stat"><span>Suma equivalente</span><span class="val" id="sumPop">—</span></div>
+      <div class="stat"><span>Diferencia</span><span class="val" id="diffPop">—</span></div>
+    </div>
+    <div id="legend">
+      <div class="legend-item"><span class="swatch selected"></span><span>Seleccionado</span></div>
+      <div class="legend-item"><span class="swatch equiv"></span><span>Equivalentes</span></div>
+      <div class="legend-item"><span class="swatch base"></span><span>Otros</span></div>
+      <span class="tag" id="yearTag">Año: —</span>
+    </div>
+    <div id="countriesList"></div>
+  </aside>
+
+  <div id="map"></div>
+</div>
+
+<script>
+/* =========================
+   Utilidades
+========================= */
+const fmt = new Intl.NumberFormat('es-CO');
+const $ = (id) => document.getElementById(id);
+function downloadJSON(filename, dataObj){
+  const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(dataObj, null, 2));
+  const dl = document.createElement('a'); dl.href = dataStr; dl.download = filename; document.body.appendChild(dl); dl.click(); dl.remove();
+}
+
+/* =========================
+   Estado
+========================= */
+let map, countriesLayer;
+let popByISO3 = new Map();
+let allCountries = [];
+let selectedLayer = null;
+let equivalences = new Set();
+
+/* =========================
+   Mapa (SVG, sin tiles)
+========================= */
+function initMap(){
+  map = L.map('map', {
+    worldCopyJump:false,
+    minZoom:2,
+    maxZoom:8,
+    zoomAnimation:false,
+    fadeAnimation:true,
+    preferCanvas:false   // SVG
+  }).setView([12,0],2);
+}
+
+/* =========================
+   GeoJSON con CORS abierto
+========================= */
+async function loadWorldGeo(){
+  const CANDIDATES = [
+    'https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_110m_admin_0_countries.geojson',
+    'https://raw.githubusercontent.com/datasets/geo-countries/master/data/countries.geojson',
+    'https://raw.githubusercontent.com/johan/world.geo.json/master/countries.geo.json'
+  ];
+  let lastErr = null;
+  for (const url of CANDIDATES){
+    try{
+      const res = await fetch(url, {mode:'cors'});
+      if(!res.ok) throw new Error(`HTTP ${res.status}`);
+      const geo = await res.json();
+      for (const f of geo.features){
+        const p = f.properties || {};
+        f.properties.name = p.name || p.ADMIN || p.ADMIN_NAME || p.NAME || p.SOVEREIGNT || p.SOVEREIGN || p.Country || p.country || 'País';
+      }
+      return geo;
+    }catch(e){ lastErr = e; }
+  }
+  throw lastErr || new Error('No se pudo descargar ningún GeoJSON de respaldo');
+}
+
+/* =========================
+   Población (REST Countries)
+========================= */
+async function loadPopulation(){
+  const cached = localStorage.getItem('world_pop_v1');
+  if (cached){ const parsed = JSON.parse(cached); applyPopulation(parsed); return {source:'localStorage', data:parsed}; }
+  const data = await fetch('https://restcountries.com/v3.1/all?fields=name,cca3,population').then(r=>r.json());
+  const cleaned = data.filter(d=>d.cca3 && d.name && d.name.common && Number.isFinite(d.population))
+                      .map(d=>({iso3:d.cca3, name:d.name.common, pop:d.population}));
+  localStorage.setItem('world_pop_v1', JSON.stringify(cleaned));
+  applyPopulation(cleaned);
+  return {source:'api', data:cleaned};
+}
+function applyPopulation(arr){
+  popByISO3.clear(); allCountries = arr.slice();
+  for (const rec of arr) popByISO3.set(rec.iso3, {name:rec.name, pop:rec.pop});
+}
+
+/* =========================
+   Render países
+========================= */
+function renderCountries(geojson){
+  countriesLayer = L.geoJSON(geojson, {
+    smoothFactor:1.0,
+    bubblingMouseEvents:true,
+    style: () => ({
+      weight:0.6, color:'#0b1022', lineJoin:'round', lineCap:'round',
+      fillColor:'#6b7280', fillOpacity:0.35, noClip:true
+    }),
+    onEachFeature: (feature, layer) => {
+      const pname = feature.properties?.name || 'País';
+      layer.feature.properties._displayName = pname;
+      layer.on({
+        click: () => onCountryClick(layer),
+        mouseover: () => layer.setStyle({weight:1.2, color:'#2a3d66', fillOpacity:0.5}),
+        mouseout: () => {
+          if (layer !== selectedLayer && !equivalences.has(layer)){
+            layer.setStyle({weight:0.6, color:'#0b1022', lineJoin:'round', lineCap:'round', fillColor:'#6b7280', fillOpacity:0.35});
+          } else {
+            if (layer === selectedLayer) layer.setStyle({weight:1.5, color:'#2a3d66', fillColor:'#80ffdb', fillOpacity:0.85});
+            if (equivalences.has(layer)) layer.setStyle({weight:1.0, color:'#2a3d66', fillColor:'#ffd166', fillOpacity:0.8});
+          }
+        }
+      });
+    }
+  }).addTo(map);
+}
+
+/* =========================
+   Helpers de estilo y click
+========================= */
+function baseStyle(){ return {weight:0.6, color:'#0b1022', fillColor:'#6b7280', fillOpacity:0.35}; }
+function selectedStyle(){ return {weight:1.5, color:'#2a3d66', fillColor:'#80ffdb', fillOpacity:0.85}; }
+function equivStyle(){ return {weight:1.0, color:'#2a3d66', fillColor:'#ffd166', fillOpacity:0.8}; }
+function getLayerName(layer){ return layer?.feature?.properties?._displayName || 'País'; }
+
+function findISO3ByName(name){
+  if(!name) return null; const lower = name.toLowerCase();
+  for (const rec of allCountries){ if (rec.name.toLowerCase() === lower) return rec.iso3; }
+  let bestISO = null;
+  for (const rec of allCountries){ if (rec.name.toLowerCase().startsWith(lower) || lower.startsWith(rec.name.toLowerCase())) bestISO = rec.iso3; }
+  return bestISO;
+}
+
+function onCountryClick(layer){
+  resetStyles();
+  selectedLayer = layer;
+  const dispName = getLayerName(layer);
+  const iso3 = findISO3ByName(dispName);
+  if(!iso3 || !popByISO3.has(iso3)){
+    setStatus(`⚠️ Sin mapeo ISO3 para "${dispName}". Prueba con otro país.`);
+    highlightSelectedOnly(layer, dispName, null); return;
+  }
+  const { name, pop } = popByISO3.get(iso3);
+  const universe = allCountries.filter(c => c.iso3 !== iso3 && Number.isFinite(c.pop));
+  const sortedByPop = universe.slice().sort((a,b)=>b.pop-a.pop);
+
+  const target = pop;
+  const result = findApproxCombination(sortedByPop, target, { tries:350, tolerance:0.02 });
+
+  layer.setStyle(selectedStyle(layer));
+  equivalences.clear();
+
+  let sum = 0;
+  if (result && result.set && result.set.length){
+    for (const pick of result.set){
+      const guess = (pick.name || '').toLowerCase();
+      let foundLayer = null;
+      countriesLayer.eachLayer(lr => {
+        const nm = getLayerName(lr).toLowerCase();
+        if (!foundLayer && (nm === guess || nm.startsWith(guess) || guess.startsWith(nm))) foundLayer = lr;
+      });
+      if (foundLayer){ foundLayer.setStyle(equivStyle(foundLayer)); equivalences.add(foundLayer); }
+      sum += pick.pop;
+    }
+  }
+
+  $('selName').textContent = `${name} (${iso3})`;
+  $('selPop').textContent = fmt.format(pop);
+  $('sumPop').textContent = result ? fmt.format(sum) : '—';
+  $('diffPop').textContent = result ? fmt.format(Math.abs(pop - sum)) : '—';
+  renderList(result?.set || []);
+  setStatus(result ? 'Listo' : 'Sin combinación adecuada (intenta otro país)');
+}
+
+function highlightSelectedOnly(layer, name, pop){
+  layer.setStyle(selectedStyle(layer));
+  $('selName').textContent = name || '—';
+  $('selPop').textContent = pop ? fmt.format(pop) : '—';
+  $('sumPop').textContent = '—'; $('diffPop').textContent = '—'; renderList([]);
+}
+
+/* =========================
+   Subset-sum aproximado
+========================= */
+function findApproxCombination(items, target, { tries=300, tolerance=0.02 } = {}){
+  let best = { diff: Infinity, set: [] };
+  const maxSum = target * (1 + tolerance);
+  for (let t=0; t<tries; t++){
+    const offset = Math.floor(Math.random() * Math.min(20, items.length));
+    const takeProbBias = 0.85;
+    let sum = 0; const chosen = [];
+    for (let i=0; i<items.length; i++){
+      const idx = (i + offset) % items.length;
+      const it = items[idx];
+      if (sum + it.pop <= maxSum){
+        const ratio = sum / target;
+        const p = ratio < 0.5 ? 1.0 : (ratio < 0.8 ? takeProbBias : 0.5);
+        if (Math.random() < p){
+          chosen.push(it); sum += it.pop; if (sum >= target) break;
+        }
+      }
+    }
+    const diff = Math.abs(target - sum);
+    if (diff < best.diff){ best = { diff, set: chosen.slice() }; if (diff === 0) break; }
+  }
+  return best.set.length ? best : null;
+}
+
+/* =========================
+   UI
+========================= */
+function renderList(arr){
+  const box = $('countriesList');
+  box.innerHTML = arr.length
+    ? arr.map(rec => `<div class="item"><strong>${rec.name}</strong><span>${fmt.format(rec.pop)}</span></div>`).join('')
+    : `<div class="item"><span class="muted">No hay países equivalentes listados</span></div>`;
+}
+function resetStyles(){ if (countriesLayer){ countriesLayer.eachLayer(lr => lr.setStyle(baseStyle(lr))); } selectedLayer=null; equivalences.clear(); }
+function setStatus(msg){ $('statusPill').textContent = msg; }
+
+/* =========================
+   Descargar JSON
+========================= */
+$('btnDownload').addEventListener('click', () => {
+  const payload = allCountries.slice().sort((a,b)=> a.name.localeCompare(b.name));
+  downloadJSON('poblacion_paises.json', payload);
+});
+
+/* =========================
+   Boot
+========================= */
+(async function main(){
+  initMap();
+  try{
+    setStatus('Cargando mapa…');
+    const geo = await loadWorldGeo();
+    renderCountries(geo);
+
+    setStatus('Cargando población…');
+    const popRes = await loadPopulation();
+    setStatus(popRes.source === 'api' ? 'Datos cargados (API)' : 'Datos cargados (cache)');
+
+    $('yearTag').textContent = 'Año: (fuente REST Countries, variable)';
+    map.fitWorld({ animate:true });
+  }catch(err){
+    console.error(err);
+    setStatus('Error al cargar datos');
+    alert('Ocurrió un error cargando el mapa o los datos.');
+  }
+})();
+</script>
+</body>
+</html>
