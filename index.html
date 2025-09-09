@@ -1,70 +1,144 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Mapa Mundi</title>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Mapa Mundi — Población Equivalente</title>
 
-  <!-- Leaflet -->
-  <link
-    rel="stylesheet"
-    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-    crossorigin=""
-  />
-  <script
-    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
-    crossorigin=""
-  ></script>
+<!-- Leaflet -->
+<link rel="stylesheet"
+  href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+  crossorigin="" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+  integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+  crossorigin=""></script>
 
-  <!-- Estilos -->
-  <style>
-    :root{
-      --bg:#0b1320; --panel:#0f1a30; --text:#e6eefc; --muted:#a9b7d0;
-      --accent:#4cc9f0; --accent-2:#64dfdf; --selected:#80ffdb; --equiv:#ffd166; --border:#21324f;
-    }
-    *{box-sizing:border-box}
-    html,body{height:100%;margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,'Helvetica Neue',Arial}
-    #app{display:grid;grid-template-columns:340px 1fr;grid-template-rows:auto 1fr;gap:10px;height:100%;padding:10px}
-    header{
-      grid-column:1/3;background:linear-gradient(90deg, rgba(76,201,240,.12), rgba(100,223,223,.04));
-      border:1px solid var(--border);border-radius:14px;padding:12px 16px;display:flex;align-items:center;justify-content:space-between
-    }
-    header h1{font-size:18px;margin:0;font-weight:700;letter-spacing:.3px}
-    header .actions{display:flex;gap:8px}
-    button,.pill{background:var(--panel);color:var(--text);border:1px solid var(--border);padding:8px 12px;border-radius:10px;cursor:pointer;font-weight:600}
-    button:hover{border-color:var(--accent);box-shadow:0 0 0 3px rgba(76,201,240,.12)}
-    #sidebar{grid-row:2;grid-column:1;background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:12px;min-height:0}
-    #info{background:rgba(255,255,255,.03);border:1px dashed var(--border);border-radius:12px;padding:12px}
-    #legend{display:flex;gap:8px;flex-wrap:wrap}
-    .legend-item{display:flex;align-items:center;gap:8px;padding:6px 8px;border:1px solid var(--border);border-radius:10px;background:rgba(255,255,255,.03)}
-    .swatch{width:14px;height:14px;border-radius:3px;border:1px solid #0003}
-    .swatch.selected{background:var(--selected)} .swatch.equiv{background:var(--equiv)} .swatch.base{background:#6b7280}
-    #countriesList{overflow:auto;flex:1;border:1px solid var(--border);border-radius:12px;padding:8px}
-    #countriesList .item{display:flex;justify-content:space-between;gap:8px;padding:6px 8px;border-bottom:1px dashed var(--border);font-size:13px;color:var(--muted)}
-    #countriesList .item strong{color:var(--text)}
-    #map{grid-row:2;grid-column:2;border:1px solid var(--border);border-radius:14px;min-height:0}
-    #map,.leaflet-container{height:100%}
-    .stat{display:grid;grid-template-columns:1fr auto;gap:6px;font-size:14px}
-    .stat .val{font-weight:700;color:var(--accent)}
-    .muted{color:var(--muted)} .hint{font-size:12px;color:var(--muted)}
-    .tag{display:inline-block;padding:2px 8px;border-radius:999px;border:1px solid var(--border);background:rgba(255,255,255,.04);font-size:12px}
-    .foot{font-size:11px;color:var(--muted)}
-    @media (max-width:980px){#app{grid-template-columns:1fr;grid-template-rows:auto 320px 1fr}#sidebar{grid-row:3;grid-column:1}#map{grid-row:2;grid-column:1}}
+<style>
+:root{
+  --bg:#0b1320; --panel:#0f1a30; --text:#e6eefc; --muted:#a9b7d0;
+  --accent:#4cc9f0; --accent-2:#64dfdf; --selected:#80ffdb; --equiv:#ffd166; --border:#21324f;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,'Helvetica Neue',Arial}
+a{color:inherit}
+#app{
+  display:grid; grid-template-columns:340px 1fr; grid-template-rows:auto 1fr;
+  gap:10px; height:100%; padding:10px;
+}
+header{
+  grid-column:1/3; background:linear-gradient(90deg, rgba(76,201,240,.12), rgba(100,223,223,.04));
+  border:1px solid var(--border); border-radius:14px; padding:12px 16px;
+  display:flex; align-items:center; justify-content:space-between;
+}
+header h1{font-size:18px;margin:0;font-weight:700;letter-spacing:.3px}
+header .actions{display:flex;gap:8px}
+button,.pill{
+  background:var(--panel); color:var(--text); border:1px solid var(--border);
+  padding:8px 12px; border-radius:10px; cursor:pointer; font-weight:600
+}
+button:hover{border-color:var(--accent); box-shadow:0 0 0 3px rgba(76,201,240,.12)}
 
-    /* Ajustes de render */
-    .leaflet-container { background:#d0e7f9; }       /* océano */
-    .leaflet-tile { image-rendering:auto; outline:1px solid transparent; border:0; }
-  </style>
+#sidebar{
+  grid-row:2; grid-column:1;
+  background:var(--panel); border:1px solid var(--border); border-radius:14px;
+  padding:14px; display:flex; flex-direction:column; gap:12px; min-height:0;
+}
+#info{
+  background:rgba(255,255,255,.03); border:1px dashed var(--border); border-radius:12px; padding:12px
+}
+#legend{ display:flex; flex-wrap:wrap; gap:10px 12px; align-items:center; margin-bottom:6px }
+.legend-item{ display:inline-flex; align-items:center; gap:8px; padding:6px 10px;
+  border:1px solid var(--border); border-radius:10px; background:rgba(255,255,255,.03); height:34px; line-height:1 }
+.swatch{ width:14px; height:14px; border-radius:3px; border:1px solid #0003 }
+.swatch.selected{ background:var(--selected) } .swatch.equiv{ background:var(--equiv) } .swatch.base{ background:#6b7280 }
+.tag{ display:inline-flex; align-items:center; height:34px; padding:6px 10px;
+  border-radius:999px; border:1px solid var(--border); background:rgba(255,255,255,.04); font-size:12px; line-height:1 }
+#yearTag{ margin-left:auto; max-width:100%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+
+#countriesList{
+  flex:1 1 auto; min-height: clamp(240px, 45vh, 520px);
+  border:1px solid var(--border); border-radius:12px; padding:8px;
+  overflow:auto; -webkit-overflow-scrolling:touch;
+  background:rgba(255,255,255,.02)
+}
+#countriesList .item{
+  display:flex; justify-content:space-between; align-items:center; gap:10px;
+  padding:10px; border-bottom:1px dashed var(--border);
+  font-size:15px; color:var(--muted); min-height:44px;
+  font-variant-numeric:tabular-nums; font-feature-settings:"tnum" 1;
+}
+#countriesList .item strong{color:var(--text)}
+
+#map{ grid-row:2; grid-column:2; border:1px solid var(--border); border-radius:14px; min-height:0 }
+#map, .leaflet-container{ height:100% }
+.leaflet-container{ background:#d0e7f9; user-select:none }
+.leaflet-tile{ image-rendering:auto; outline:1px solid transparent; border:0 }
+.leaflet-interactive{ cursor:pointer }
+
+/* Estadísticas */
+.stat{ display:grid; grid-template-columns:1fr auto; gap:6px; font-size:14px }
+.stat .val{ font-weight:700; color:var(--accent) }
+.muted{ color:var(--muted) }
+.pill[aria-live]{ min-width:180px; text-align:center }
+
+/* Layout móvil / tablet */
+@media (max-width: 1280px){
+  /* Si no cabe, “Año” ocupa su propia fila */
+  #yearTag{ order:99; flex:0 0 100%; margin-left:0; white-space:normal }
+}
+@media (max-width: 980px){
+  #app{ grid-template-columns:1fr; grid-template-rows:auto 300px minmax(0,1fr) }
+  #sidebar{ grid-row:3; grid-column:1 }
+  #map{ grid-row:2; grid-column:1 }
+}
+/* 📱 Móvil: mapa más bajo, lista grande */
+@media (max-width: 600px){
+  /* ⬆️ Aquí decides el alto del mapa: usa clamp(min, preferido, max) con svh */
+  #app{
+    /* header (auto) / MAPA (≈45% de la pantalla) / ASIDE (resto) */
+    grid-template-rows: auto clamp(220px, 35svh, 420px) minmax(0, 1fr);
+  }
+
+  /* El aside debe poder encoger, y su hijo (#countriesList) crecer */
+  #sidebar{
+    display: flex;
+    flex-direction: column;
+    min-height: 0;            /* clave para que el scroll funcione */
+    gap: 12px;
+    padding: 16px;
+  }
+
+  /* 👉 la lista ocupa todo el espacio restante del aside */
+  #countriesList{
+    flex:1 1 auto;
+    min-height:0;
+    max-height:none;
+    overflow:auto;
+    -webkit-overflow-scrolling:touch;
+    margin-top:6px;
+  }
+
+  /* Compactamos lo de arriba para darle más espacio a la lista */
+  #info{ padding: 10px; }
+  .legend-item, .tag{ height: 32px; padding: 6px 8px; font-size: 12px; }
+  .stat{ font-size: 15px; }
+
+  /* Si la leyenda no cabe en una línea, el “Año” baja solo */
+  #yearTag{ order: 99; flex: 0 0 100%; margin-left: 0; white-space: normal; }
+}
+
+
+
+</style>
+</style>
 </head>
 <body>
 <div id="app">
   <header>
     <h1>Mapa Mundi</h1>
     <div class="actions">
-      <button id="btnDownload">Descargar JSON de población</button>
-      <span class="pill" id="statusPill">Cargando datos…</span>
+      <button id="btnDownload" type="button">Descargar JSON de población</button>
     </div>
   </header>
 
@@ -75,54 +149,75 @@
       <div class="stat"><span>Suma equivalente</span><span class="val" id="sumPop">—</span></div>
       <div class="stat"><span>Diferencia</span><span class="val" id="diffPop">—</span></div>
     </div>
+
     <div id="legend">
       <div class="legend-item"><span class="swatch selected"></span><span>Seleccionado</span></div>
       <div class="legend-item"><span class="swatch equiv"></span><span>Equivalentes</span></div>
       <div class="legend-item"><span class="swatch base"></span><span>Otros</span></div>
-      <span class="tag" id="yearTag">Año: —</span>
     </div>
-    <div id="countriesList"></div>
+
+    <div id="countriesList" role="list" aria-label="Países equivalentes"></div>
   </aside>
 
-  <div id="map"></div>
+  <div id="map" aria-label="Mapa mundial"></div>
 </div>
 
 <script>
 /* =========================
-   Utilidades
+   Utilidades y estado
 ========================= */
 const fmt = new Intl.NumberFormat('es-CO');
-const $ = (id) => document.getElementById(id);
+const $ = id => document.getElementById(id);
+// antes: $('statusPill').textContent = msg;
+const setStatus = (msg) => {
+  const el = document.getElementById('statusPill');
+  if (el) el.textContent = msg; // si no existe, no hace nada
+};
+
+
 function downloadJSON(filename, dataObj){
-  const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(dataObj, null, 2));
-  const dl = document.createElement('a'); dl.href = dataStr; dl.download = filename; document.body.appendChild(dl); dl.click(); dl.remove();
+  const dataStr = "data:text/json;charset=utf-8," +
+    encodeURIComponent(JSON.stringify(dataObj, null, 2));
+  const a = document.createElement('a');
+  a.href = dataStr; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
 }
 
-/* =========================
-   Estado
-========================= */
 let map, countriesLayer;
-let popByISO3 = new Map();
-let allCountries = [];
+let allCountries = [];              // [{ iso3, name, pop }]
+let popByISO3 = new Map();          // ISO3 -> { name, pop }
+let iso3ByName = new Map();         // nameLower -> ISO3 (incluye altSpellings)
 let selectedLayer = null;
 let equivalences = new Set();
 
 /* =========================
-   Mapa (SVG, sin tiles)
+   Mapa
 ========================= */
+const WORLD_TIGHT_BOUNDS = L.latLngBounds(L.latLng(-58, -150), L.latLng(82, 150));
+
 function initMap(){
   map = L.map('map', {
-    worldCopyJump:false,
-    minZoom:2,
-    maxZoom:8,
-    zoomAnimation:false,
-    fadeAnimation:true,
-    preferCanvas:false   // SVG
-  }).setView([12,0],2);
+    worldCopyJump:false, minZoom:3, maxZoom:8,
+    zoomDelta:0.25, zoomSnap:0.25,
+    zoomAnimation:false, fadeAnimation:true, preferCanvas:false
+  }).setView([20, 0], 3);
+
+  L.tileLayer(
+    'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+    {
+      attribution: '&copy; OpenStreetMap &copy; CARTO',
+      subdomains: 'abcd', maxZoom: 19, detectRetina:true,
+      updateWhenIdle:true, updateWhenZooming:false, keepBuffer:4,
+      crossOrigin:true, noWrap:true, bounds: WORLD_TIGHT_BOUNDS
+    }
+  ).addTo(map);
+
+  map.setMaxBounds(WORLD_TIGHT_BOUNDS);
+  map.options.maxBoundsViscosity = 1.0;
 }
 
 /* =========================
-   GeoJSON con CORS abierto
+   Datos: GeoJSON (fronteras)
 ========================= */
 async function loadWorldGeo(){
   const CANDIDATES = [
@@ -138,164 +233,244 @@ async function loadWorldGeo(){
       const geo = await res.json();
       for (const f of geo.features){
         const p = f.properties || {};
-        f.properties.name = p.name || p.ADMIN || p.ADMIN_NAME || p.NAME || p.SOVEREIGNT || p.SOVEREIGN || p.Country || p.country || 'País';
+        f.properties.name = p.name || p.ADMIN || p.ADMIN_NAME || p.NAME ||
+                            p.SOVEREIGNT || p.SOVEREIGN || p.Country || p.country || 'País';
       }
       return geo;
     }catch(e){ lastErr = e; }
   }
-  throw lastErr || new Error('No se pudo descargar ningún GeoJSON de respaldo');
+  throw lastErr || new Error('No se pudo descargar ningún GeoJSON');
 }
 
 /* =========================
-   Población (REST Countries)
+   Datos: Población (REST Countries)
 ========================= */
 async function loadPopulation(){
-  const cached = localStorage.getItem('world_pop_v1');
-  if (cached){ const parsed = JSON.parse(cached); applyPopulation(parsed); return {source:'localStorage', data:parsed}; }
-  const data = await fetch('https://restcountries.com/v3.1/all?fields=name,cca3,population').then(r=>r.json());
-  const cleaned = data.filter(d=>d.cca3 && d.name && d.name.common && Number.isFinite(d.population))
-                      .map(d=>({iso3:d.cca3, name:d.name.common, pop:d.population}));
-  localStorage.setItem('world_pop_v1', JSON.stringify(cleaned));
+  const CACHE_KEY = 'world_pop_v2'; // ← sube versión si cambias el formato
+  const cached = localStorage.getItem(CACHE_KEY);
+  if (cached){
+    const parsed = JSON.parse(cached);
+    applyPopulation(parsed);
+    return {source:'cache', data:parsed};
+  }
+
+  // name (common/official), altSpellings para mejor mapeo, cca3 y population
+  const url = 'https://restcountries.com/v3.1/all?fields=name,cca3,population,altSpellings';
+  const data = await fetch(url).then(r => r.json());
+
+  const cleaned = data
+    .filter(d => d.cca3 && d.name?.common && Number.isFinite(d.population))
+    .map(d => ({
+      iso3: d.cca3,
+      name: d.name.common,
+      official: d.name.official || d.name.common,
+      alt: Array.isArray(d.altSpellings) ? d.altSpellings : [],
+      pop: d.population
+    }));
+
+  localStorage.setItem(CACHE_KEY, JSON.stringify(cleaned));
   applyPopulation(cleaned);
   return {source:'api', data:cleaned};
 }
+
 function applyPopulation(arr){
-  popByISO3.clear(); allCountries = arr.slice();
-  for (const rec of arr) popByISO3.set(rec.iso3, {name:rec.name, pop:rec.pop});
+  allCountries = arr.map(({iso3, name, pop}) => ({iso3, name, pop}));
+  popByISO3.clear(); iso3ByName.clear();
+
+  // Index principal por ISO y por nombres alternativos
+  for (const rec of arr){
+    popByISO3.set(rec.iso3, { name: rec.name, pop: rec.pop });
+
+    // nombre común
+    iso3ByName.set(rec.name.toLowerCase(), rec.iso3);
+    // nombre oficial
+    iso3ByName.set((rec.official || rec.name).toLowerCase(), rec.iso3);
+    // altSpellings
+    for (const a of rec.alt){
+      if (a && typeof a === 'string') iso3ByName.set(a.toLowerCase(), rec.iso3);
+    }
+  }
+
+  // overrides mínimos (cuando los datasets usan etiquetas raras)
+  const manual = {
+    'russia': 'RUS',
+    'russian federation': 'RUS',
+    'united states': 'USA',
+    'united states of america': 'USA',
+    'bolivia': 'BOL',
+    'cabo verde': 'CPV',
+    'côte d’ivoire': 'CIV',
+    'cote d\'ivoire': 'CIV',
+    'congo (kinshasa)': 'COD',
+    'congo (brazzaville)': 'COG',
+    'palestine': 'PSE',
+    'vatican': 'VAT',
+  };
+  for (const [k,v] of Object.entries(manual)) iso3ByName.set(k, v);
 }
 
 /* =========================
-   Render países
+   Render de países
 ========================= */
 function renderCountries(geojson){
   countriesLayer = L.geoJSON(geojson, {
     smoothFactor:1.0,
     bubblingMouseEvents:true,
-    style: () => ({
-      weight:0.6, color:'#0b1022', lineJoin:'round', lineCap:'round',
-      fillColor:'#6b7280', fillOpacity:0.35, noClip:true
-    }),
+    style: baseStyle,
     onEachFeature: (feature, layer) => {
       const pname = feature.properties?.name || 'País';
       layer.feature.properties._displayName = pname;
       layer.on({
         click: () => onCountryClick(layer),
-        mouseover: () => layer.setStyle({weight:1.2, color:'#2a3d66', fillOpacity:0.5}),
+        mouseover: () => layer.setStyle(hoverStyle()),
         mouseout: () => {
           if (layer !== selectedLayer && !equivalences.has(layer)){
-            layer.setStyle({weight:0.6, color:'#0b1022', lineJoin:'round', lineCap:'round', fillColor:'#6b7280', fillOpacity:0.35});
+            layer.setStyle(baseStyle());
           } else {
-            if (layer === selectedLayer) layer.setStyle({weight:1.5, color:'#2a3d66', fillColor:'#80ffdb', fillOpacity:0.85});
-            if (equivalences.has(layer)) layer.setStyle({weight:1.0, color:'#2a3d66', fillColor:'#ffd166', fillOpacity:0.8});
+            if (layer === selectedLayer) layer.setStyle(selectedStyle());
+            if (equivalences.has(layer)) layer.setStyle(equivStyle());
           }
         }
       });
+      // tooltip simple
+      layer.bindTooltip(pname, {sticky:true, direction:'top', opacity:0.85});
     }
   }).addTo(map);
 }
 
-/* =========================
-   Helpers de estilo y click
-========================= */
-function baseStyle(){ return {weight:0.6, color:'#0b1022', fillColor:'#6b7280', fillOpacity:0.35}; }
-function selectedStyle(){ return {weight:1.5, color:'#2a3d66', fillColor:'#80ffdb', fillOpacity:0.85}; }
-function equivStyle(){ return {weight:1.0, color:'#2a3d66', fillColor:'#ffd166', fillOpacity:0.8}; }
+/* Estilos */
+function baseStyle(){ return { weight:0.6, color:'#0b1022', fillColor:'#6b7280', fillOpacity:0.35, lineJoin:'round', lineCap:'round' }; }
+function hoverStyle(){ return { weight:1.2, color:'#2a3d66', fillOpacity:0.5 }; }
+function selectedStyle(){ return { weight:1.5, color:'#2a3d66', fillColor:'#80ffdb', fillOpacity:0.85 }; }
+function equivStyle(){ return { weight:1.0, color:'#2a3d66', fillColor:'#ffd166', fillOpacity:0.8 }; }
+
 function getLayerName(layer){ return layer?.feature?.properties?._displayName || 'País'; }
 
+/* match nombre → ISO3 usando índices y degradando a heurística */
 function findISO3ByName(name){
-  if(!name) return null; const lower = name.toLowerCase();
-  for (const rec of allCountries){ if (rec.name.toLowerCase() === lower) return rec.iso3; }
-  let bestISO = null;
-  for (const rec of allCountries){ if (rec.name.toLowerCase().startsWith(lower) || lower.startsWith(rec.name.toLowerCase())) bestISO = rec.iso3; }
-  return bestISO;
+  if (!name) return null;
+  const lower = name.toLowerCase();
+  if (iso3ByName.has(lower)) return iso3ByName.get(lower);
+
+  // fallback: startsWith / includes
+  for (const [k, v] of iso3ByName){
+    if (k.startsWith(lower) || lower.startsWith(k)) return v;
+  }
+  return null;
 }
 
+/* =========================
+   Click en país
+========================= */
 function onCountryClick(layer){
   resetStyles();
+
   selectedLayer = layer;
   const dispName = getLayerName(layer);
   const iso3 = findISO3ByName(dispName);
-  if(!iso3 || !popByISO3.has(iso3)){
-    setStatus(`⚠️ Sin mapeo ISO3 para "${dispName}". Prueba con otro país.`);
-    highlightSelectedOnly(layer, dispName, null); return;
+  if (!iso3 || !popByISO3.has(iso3)){
+    setStatus(`⚠️ Sin datos para "${dispName}". Elige otro país.`);
+    highlightSelectedOnly(layer, dispName, null);
+    return;
   }
+
   const { name, pop } = popByISO3.get(iso3);
-  const universe = allCountries.filter(c => c.iso3 !== iso3 && Number.isFinite(c.pop));
-  const sortedByPop = universe.slice().sort((a,b)=>b.pop-a.pop);
+
+  const universe = allCountries.filter(c => c.iso3 !== iso3 && Number.isFinite(c.pop))
+                               .sort((a,b) => b.pop - a.pop);
 
   const target = pop;
-  const result = findApproxCombination(sortedByPop, target, { tries:350, tolerance:0.02 });
+  const result = findApproxCombination(universe, target, { tries: 420, tolerance: 0.02 });
 
-  layer.setStyle(selectedStyle(layer));
+  layer.setStyle(selectedStyle());
   equivalences.clear();
 
   let sum = 0;
-  if (result && result.set && result.set.length){
+  if (result && result.set?.length){
     for (const pick of result.set){
-      const guess = (pick.name || '').toLowerCase();
-      let foundLayer = null;
+      let found = null;
       countriesLayer.eachLayer(lr => {
         const nm = getLayerName(lr).toLowerCase();
-        if (!foundLayer && (nm === guess || nm.startsWith(guess) || guess.startsWith(nm))) foundLayer = lr;
+        if (!found){
+          const guess = pick.name.toLowerCase();
+          if (nm === guess || nm.startsWith(guess) || guess.startsWith(nm)) found = lr;
+        }
       });
-      if (foundLayer){ foundLayer.setStyle(equivStyle(foundLayer)); equivalences.add(foundLayer); }
+      if (found){ found.setStyle(equivStyle()); equivalences.add(found); }
       sum += pick.pop;
     }
   }
 
   $('selName').textContent = `${name} (${iso3})`;
-  $('selPop').textContent = fmt.format(pop);
-  $('sumPop').textContent = result ? fmt.format(sum) : '—';
+  $('selPop').textContent  = fmt.format(pop);
+  $('sumPop').textContent  = result ? fmt.format(sum) : '—';
   $('diffPop').textContent = result ? fmt.format(Math.abs(pop - sum)) : '—';
   renderList(result?.set || []);
   setStatus(result ? 'Listo' : 'Sin combinación adecuada (intenta otro país)');
 }
 
 function highlightSelectedOnly(layer, name, pop){
-  layer.setStyle(selectedStyle(layer));
+  layer.setStyle(selectedStyle());
   $('selName').textContent = name || '—';
-  $('selPop').textContent = pop ? fmt.format(pop) : '—';
-  $('sumPop').textContent = '—'; $('diffPop').textContent = '—'; renderList([]);
+  $('selPop').textContent  = pop ? fmt.format(pop) : '—';
+  $('sumPop').textContent  = '—';
+  $('diffPop').textContent = '—';
+  renderList([]);
 }
 
 /* =========================
-   Subset-sum aproximado
+   Heurística subset-sum (mejorada)
 ========================= */
-function findApproxCombination(items, target, { tries=300, tolerance=0.02 } = {}){
-  let best = { diff: Infinity, set: [] };
+function findApproxCombination(items, target, { tries=360, tolerance=0.02 } = {}){
+  // 1) Greedy puro como baseline
   const maxSum = target * (1 + tolerance);
+  const baseline = greedyPick(items, target, maxSum);
+
+  let best = baseline ?? { diff: Infinity, set: [] };
+
+  // 2) Varias pasadas con offsets y ligera aleatoriedad
+  const len = items.length;
   for (let t=0; t<tries; t++){
-    const offset = Math.floor(Math.random() * Math.min(20, items.length));
-    const takeProbBias = 0.85;
-    let sum = 0; const chosen = [];
-    for (let i=0; i<items.length; i++){
-      const idx = (i + offset) % items.length;
-      const it = items[idx];
+    const offset = Math.floor(Math.random() * Math.min(25, len));
+    const takeBias = 0.85;
+    let sum = 0, chosen = [];
+    for (let i=0; i<len; i++){
+      const it = items[(i + offset) % len];
       if (sum + it.pop <= maxSum){
         const ratio = sum / target;
-        const p = ratio < 0.5 ? 1.0 : (ratio < 0.8 ? takeProbBias : 0.5);
-        if (Math.random() < p){
-          chosen.push(it); sum += it.pop; if (sum >= target) break;
-        }
+        const p = ratio < 0.5 ? 1.0 : (ratio < 0.8 ? takeBias : 0.5);
+        if (Math.random() < p){ chosen.push(it); sum += it.pop; if (sum >= target) break; }
       }
     }
     const diff = Math.abs(target - sum);
-    if (diff < best.diff){ best = { diff, set: chosen.slice() }; if (diff === 0) break; }
+    if (diff < best.diff) best = { diff, set: chosen.slice() };
+    if (best.diff === 0) break;
   }
+
   return best.set.length ? best : null;
+
+  function greedyPick(arr, tgt, limit){
+    let s=0, pick=[];
+    for (const it of arr){
+      if (s + it.pop <= limit){ pick.push(it); s+=it.pop; if (s>=tgt) break; }
+    }
+    return pick.length ? { diff: Math.abs(tgt-s), set: pick } : null;
+  }
 }
 
 /* =========================
-   UI
+   UI helpers
 ========================= */
 function renderList(arr){
   const box = $('countriesList');
   box.innerHTML = arr.length
-    ? arr.map(rec => `<div class="item"><strong>${rec.name}</strong><span>${fmt.format(rec.pop)}</span></div>`).join('')
+    ? arr.map(rec => `<div class="item" role="listitem"><strong>${rec.name}</strong><span>${fmt.format(rec.pop)}</span></div>`).join('')
     : `<div class="item"><span class="muted">No hay países equivalentes listados</span></div>`;
 }
-function resetStyles(){ if (countriesLayer){ countriesLayer.eachLayer(lr => lr.setStyle(baseStyle(lr))); } selectedLayer=null; equivalences.clear(); }
-function setStatus(msg){ $('statusPill').textContent = msg; }
+function resetStyles(){
+  if (countriesLayer){ countriesLayer.eachLayer(lr => lr.setStyle(baseStyle())); }
+  selectedLayer = null; equivalences.clear();
+}
 
 /* =========================
    Descargar JSON
@@ -319,8 +494,7 @@ $('btnDownload').addEventListener('click', () => {
     const popRes = await loadPopulation();
     setStatus(popRes.source === 'api' ? 'Datos cargados (API)' : 'Datos cargados (cache)');
 
-    $('yearTag').textContent = 'Año: (fuente REST Countries, variable)';
-    map.fitWorld({ animate:true });
+    map.fitBounds(WORLD_TIGHT_BOUNDS, { animate:true, padding:[10,10] });
   }catch(err){
     console.error(err);
     setStatus('Error al cargar datos');
